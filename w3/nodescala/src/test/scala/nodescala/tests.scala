@@ -31,8 +31,23 @@ class NodeScalaSuite extends FunSuite {
     }
   }
 
-  
-  
+  test("CancellationTokenSource should allow stopping the computation") {
+    val cts = CancellationTokenSource()
+    val ct = cts.cancellationToken
+    val p = Promise[String]()
+
+    async {
+      while (ct.nonCancelled) {
+        // do work
+      }
+
+      p.success("done")
+    }
+
+    cts.unsubscribe()
+    assert(Await.result(p.future, 1 second) == "done")
+  }
+
   class DummyExchange(val request: Request) extends Exchange {
     @volatile var response = ""
     val loaded = Promise[String]()
@@ -91,6 +106,7 @@ class NodeScalaSuite extends FunSuite {
       l.emit(req)
     }
   }
+
   test("Server should serve requests") {
     val dummy = new DummyServer(8191)
     val dummySubscription = dummy.start("/testDir") {
